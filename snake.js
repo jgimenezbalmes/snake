@@ -3,151 +3,234 @@
  * @class
  */
 class Game {
+  /**
+   * Inicialitza els paràmetres del joc i crea el canvas
+   * @constructor
+   * @param {number} width -  width del canvas
+   * @param {number} height -  height del canvas
+   * @param {number} amount -  nombre de quadrats per fila de la quadrícula
+   */
+  constructor(width, height, amount) {
+    this.width = width;
+    this.height = height;
+    this.amount = amount;
+    this.initCanvas(width, height);
+    this.start();
+    this.temps=0;
+    this.velocitat=12;
+  }
 
-	/**
-	 * Inicialitza els paràmetres del joc i crea el canvas
-	 * @constructor
-	 * @param {number} width -  width del canvas
-	 * @param {number} height -  height del canvas
-	 * @param {number} amount -  nombre de quadrats per fila de la quadrícula
-	 */
-	constructor(width,height,amount) {
-		this.width = width;
-		this.height = height;
-		this.amount = amount; 
-		this.initCanvas(width, height);
-		this.start();
+  /**
+   * Crea un canvas i es guarda el [context](https://developer.mozilla.org/es/docs/Web/API/CanvasRenderingContext2D) a un atribut per poder
+   * accedir-hi des dels mètodes de pintar al canvas (com ara drawSquare, clear)
+   * @param {number} width -  width del canvas
+   * @param {number} height -  height del canvas
+   */
+
+  initCanvas(width, height) {
+    let canvas = document.createElement("canvas");
+
+    canvas.width = width;
+    canvas.height = height;
+    canvas.style.border = "1px solid";
+    this.ctx = canvas.getContext("2d");
+    document.getElementsByTagName("body")[0].appendChild(canvas);
+  }
+
+  /**
+   * Inicialitza els paràmetres del joc:
+   * Serp al centre, direcció cap a la dreta, puntuació 0
+   */
+  start() {
+    this.puntuacio = 0;
+	  this.index = 0;
+    this.direccio = [1, 0];
+    this.pos = [[parseInt(this.amount / 2), parseInt(this.amount / 2)]];
+    this.addFood();
+    this.velocitat = 12;
+  }
+
+  /**
+   * Dibuixa un quadrat de la mida de la quadrícula (passada al constructor) al canvas
+   * @param {number} x -  posició x de la quadrícula (no del canvas)
+   * @param {number} y -  posició y de la quadrícula (no del canvas)
+   * @param {string} color -  color del quadrat
+   */
+  drawSquare(x, y, color) {
+    let a = this.width / this.amount;
+    this.ctx.beginPath();
+    this.ctx.strokeStyle = color;
+    this.ctx.rect(a * x, a * y, a, a);
+    this.ctx.stroke();
+  }
+
+  /**
+   * Neteja el canvas (pinta'l de blanc)
+   */
+  clear() {
+    this.ctx.beginPath();
+    this.ctx.fillStyle = "#dcd8c0";
+    this.ctx.fillRect(0, 0, this.width, this.height);
+    this.ctx.stroke();
+  }
+
+  /**
+   * Dibuixa la serp al canvas
+   */
+  drawSnake() {
+    for (let i = 0; i < this.pos.length; i++) {
+      this.drawSquare(this.pos[i][0], this.pos[i][1], "#454138");
+    }
+  }
+
+  /**
+   * Dibuixa la poma al canvas
+   */
+  drawFood() {
+    this.drawSquare(this.foodpos[0], this.foodpos[1], "red");
+  }
+
+  /**
+   * La serp xoca amb la posició donada?
+   * @param {number} x -  posició x a comprovar
+   * @param {number} y -  posició y a comprovar
+   * @return {boolean} - xoca o no
+   */
+  collides(x, y) {
+    let estatcol = false;
+    for (let i = 0; i < this.pos.length; i++) {
+      if (this.pos[i][0] == x && this.pos[i][1] == y) {
+        estatcol = true;
+      }
+    }
+    return estatcol;
+  }
+
+  /**
+   * Afegeix un menjar a una posició aleatòria, la posició no ha de ser cap de les de la serp
+   */
+  addFood() {
+    let pos1;
+    do {
+      pos1 = [
+        parseInt(Math.random() * this.amount),
+        parseInt(Math.random() * this.amount),
+      ];
+    } while (this.collides(pos1[0], pos1[1]));
+    this.foodpos = pos1;
+    console.log(this.foodpos);
+  }
+
+  /**
+   * Calcula una nova posició a partir de la ubicació de la serp
+   * @return {Array} - nova posició
+   */
+  newTile() {
+    let newpos = [];
+    newpos[0] = (this.pos[this.pos.length - 1][0] + this.direccio[0])%this.amount;
+    newpos[1] = (this.pos[this.pos.length - 1][1] + this.direccio[1])%this.amount;
+	if (newpos[0]<0){
+		newpos[0] = this.amount+newpos[0];
 	}
-
-	/**
-	 * Crea un canvas i es guarda el [context](https://developer.mozilla.org/es/docs/Web/API/CanvasRenderingContext2D) a un atribut per poder
-	 * accedir-hi des dels mètodes de pintar al canvas (com ara drawSquare, clear)
-	 * @param {number} width -  width del canvas
-	 * @param {number} height -  height del canvas
-	 */
-	
-	initCanvas(width, height) {
-		let canvas = document.createElement('canvas');
-		
-		canvas.width = width;
-		canvas.height = height;
-		canvas.style.border   = "1px solid";
-		this.ctx = canvas.getContext('2d');
-		document.getElementsByTagName('body')[0].appendChild(canvas);
+	if (newpos[1]<0){
+		newpos[1] = this.amount+newpos[1];
 	}
+    return newpos;
+  }
 
-	/**
-	 * Inicialitza els paràmetres del joc:
-	 * Serp al centre, direcció cap a la dreta, puntuació 0
-	 */
-	start() {
-		this.puntuacio = 0;
-		this.direccio = [0,1];
-		this.pos =[[parseInt(this.amount/2), parseInt(this.amount/2)]];
-	}
+  /**
+   * Calcula el nou estat del joc, nova posició de la serp, nou menjar si n'hi ha ...
+   * i ho dibuixa al canvas
+   */
+  step() {
+    this.temps++;
+    if (this.temps==this.velocitat){
+      if (this.collides(this.foodpos[0], this.foodpos[1])) {
+        this.pos.push(this.newTile());
+	      this.addFood();
+	      this.puntuacio+=50;
+	      this.index = (this.index+1)%this.messages.length;
+        this.velocitat=parseInt(this.velocitat*0.9);
+        if (this.velocitat<1){
+          this.velocitat =1;
+        }
+      }
+	    else{
+		    this.pos.push(this.newTile());
+		    this.pos.shift();
+	    }
+      this.clear();
+      this.drawSnake();
+      this.drawFood();
+		  if(this.collides(this.newTile()[0], this.newTile()[1])){
+			  this.start();	
+	    }
+	    this.puntuacioMostra();
+	    this.missatges();
+    
+      this.temps=0;
+    }
+  }
+    puntuacioMostra(){
+	    document.getElementById("puntuacio").innerText = "La teva puntuació és: "+this.puntuacio;
+	    document.getElementById("puntuacio").style.color = "#454130";
+	    document.getElementById("puntuacio").style.fontFamily = "Optima, sans-serif";
+    }
 
-	/**
-	 * Dibuixa un quadrat de la mida de la quadrícula (passada al constructor) al canvas
-	 * @param {number} x -  posició x de la quadrícula (no del canvas)
-	 * @param {number} y -  posició y de la quadrícula (no del canvas)
-	 * @param {string} color -  color del quadrat
-	 */
-	drawSquare(x,y,color) {
-		let a = this.width/this.amount; 
-		this.ctx.beginPath();
-		this.ctx.strokeStyle = color;
-		this.ctx.rect(a*x, a*y, a, a);
-		this.ctx.stroke();
-	}
+    missatges(){
+	    this.messages = [
+        "Mai aconseguiras satisfer la teva gana",
+        "En aquest joc només pots perdre",
+        "Encara criden, ho saps?",
+        "SANG SANG SANG SANG SANG SANG SANG",
+        "M̸̝͝e̶̫̔n̷͖̒j̶̱͊ȃ̴̢-̶̠̑t̸͖̂ė̵͓'̵̹̾l̵͕͘s̵͚͆,̸͓̋ ̴̬͊n̸͖̂ȍ̴̲ ̶̮̓d̸̻̈́ė̵̱ĭ̵̭x̴̝̓i̶͑ͅs̷̪̃ ̵̮̽c̷̫̅a̵͍̒p̶͕͗ ̸͕̓ṉ̴͂ị̸͘ ̷̢͒ù̷̻n̴̮̏",
+        "A̴̼̓A̴͈̪̔Ả̵̼Ȃ̸̢̼Â̶͕Ă̵̬̗Ă̷̰͍Ä̵͉͔́̿A̵̺̳̿͒Ạ̴͉̄͝A̸̢͔͆͂Ȁ̸̛̞͚A̸̪̜̍A̸̾́ͅÄ̵̘̲͛A̵̭͉͗͊Á̷͊͜ͅĀ̷̘͌Ä̷̤́̈́A̴̺͌͜Á̵̬̼Ä̶͇́Ḁ̴̤̌̒À̸̼͎͗A̷͍͆Ä̷̰̰́͋Ã̴̲A̵̹͔̓͠A̶͇̒̚",
+        "S̸̲̣̈́̀̈̕A̸̝̹̘̬̙̰̘̒͐̏̀͗Ń̶̠͍̪Ģ̷̍̑̈̅̎P̶̢̛̝͇̅̅̐͋̈́͠E̶̞̩͑͆͜Ḻ̴̋̄͛̅̈͠͠D̸̖̗͒̃̽̀͌̚É̵̢̲̩͎͓͕̈́U̴̬̬̠͂̓͗̎D̶̗̊̐̅E̵͓̔͗̕L̴̟̞͕̥̱̗̿̈́Á̸̻̭̜̟̞̙́̍̅́͜͝S̷̲̀̌Ǎ̵̭N̷̨͙̽̇̌̈̀G̵͔̟̬͕̈͗͌̉",
+        "Ć̴͍̖̪̱͈͂̀͂̈́͗͋̊̉R̶̨͕̝̣̜̜̥͂̅̽̚Â̴͚̯͚̭̇̐̆̉Ņ̶̡̜̙̖̠͎̣̹̌̌I̴̳͙̞̯͈͈̩̭͑́͗͐̕̚S̷͈̻͔̫̻̖̻̙̿̍̂̂̋̀̀P̵̛̘͎͉̪̰͇͖E̴͍͐̿͆̊̀́̉L̴̤̫̭̘̐̕T̵̨̧͈̙̞̼̻̽R̸̻̦̠̃Ǒ̴̪̳͉͔̬̥͜D̵̠̦͉̝͓̯͈͈͊̍̔́̓̎E̵̢̨͈͖̯̲͖̖͑̓̊̅̊͌̂̉L̵͉̝̣̙͉͙̍͌͆̄ͅS̶̪͔̱̭͒Ĉ̸̦͈̋̀̌́̈́̀̄Ŗ̸̛̖̩̮̖͔̀͐́̀͑͆͜ͅA̴̛̯͋̔̆͂͂͐͂ͅN̴̟͎̟̆̀̄̈́̎̚̕Ĩ̵̘͛̈͠Ś̷̢͖̝̰̙͚̻͖̑̑̈",
+        "M̴͎̤͎͗́̎̉́É̷̪͚̦̦̔̆̈́̇̂̽͐Ṣ̷̛̝̜̠̬͇̮͍̣̰̹̙͂͒̎̓̀̂͂̔̒̑͘M̴̡̹͍̀ͅÉ̶͓̰͇͈̱̪̞͕̙̦͐̎̕S̵̙̿̈́͑͗̓̀͒͋̈̉͘M̶̨̢̛̮̖͚͕͔̖̪̼̦̀͒̿É̵̡̟͇̘̦̬̝͙̲̝̮̍͊̍ͅS̴̹̼̰͈͒͗̕̚N̸̨̳͍̮̰̠̼͙̟͉̦͎̍̇̉̎̓̎́̀͝O̷̰̯̭̤̍̐̽̔̂D̷̨͙̭̰̱͖̦̻̹͈̞̏͌͛̏̓Ê̶̳͔̦̱̾̑͛͐Ȉ̷̡̨̛̙͓̙̙͎̎͑͊̐͆̓̔͝͝Ẍ̷̞̯̭̓̇̇͂̚I̴͍̟͚̦̮͇̝͔̜͓͒̌̆̋͋̀́̑̓̌͒̾ͅS̶̺̟̙͉̙̮̙̳̙̎͋͂͜͜ͅN̶̠͕͑̅̎͛̏͝I̸̡̨̪̳̜̗͍̲̪͕̰̮͗Ų̵̧̛͈̫̗̟̤̜͈͇͖̾̒̇̊̾̽̈́́̑͠͝ͅN̴̻͆̈̑̏̆",
+        "Ţ̴̡̺̝̥̖̣̪̮̠̓̀̀̉̅̏́̀̎̑͠Ö̷̢̦̰̻̣͙͍͙̝̻̬́͑̇̕T̵̡̨̤͍̲̪̲̮̲̜̯̫̓͑̈́͌̈́̋̀͑̏̋͂͜͠͝Ḛ̴̽̅̃͊͊̿͝Ś̷̨̛͍̞̆̈̃͗͝L̷̡̡͔͕̎̈́͌͊͂͠Ě̴̡̡̧͚̳̠̻̖̥͍͖̬̠̾͒̐̊͗ͅS̷͚̙̩̩͚̗͌̅̿̅͆̉̏͌̆͝͠ͅĄ̴̗̯͐̋̐̓̓͒̈́̆̿̽ͅN̸̙͚̅̾̏̌͒Į̶̖̱̻̮̲̭̖̺̭͎̣̪̣̅̀̆̔̅̉̽̚͠M̶̤̻͖͇̠̤̬̀̅͗̌̉̿̑̆̾̒̾̚͝͝ͅȄ̴̻̈̍S̶̗̲̼̠͎̓̎͒̅̌̓̏̆̆́M̸̛̛̞͚̰̘͉̲͉̂͌̌̀̌̓̈́̏̍̌̒'̷͇̲͉̯̾̉̍H̵̢̼̜̽̾̒̌̍̀̍͂Ạ̸̯͔̪̦̼̟͒Ň̷̰̕Ḓ̶̢͈̥̒͊͑͊͜E̵̡̖͈̹͖̽́͆̈́P̸̣͈͈̼̯̙̠͎̣̓͋Ě̷͙̝̮̘̮̔̈́̾͐̅͌͐̀̀̅̄̕̕Ŗ̴̧͍̖̭̗̤̻̄͑̒͗́T̸̰͉̼͈̗̝̟͎̱̜̄̈͌́̃̈́͑̂̿A̶̮̯̟̪̅̿͐̕͠N̸̢̳̦̙͔̘̩̲̥͎͔̿̎̋͛̚͝ͅỴ̸̛̻̻̳̪̳̝̐̈́̈́̀̈́̚̕Ė̸̢̛̞̖̓̐͆͒̃̈́̍̈́͜͠R̷̢͎͖͎͎̳̟͎͔̳̻̪͑͂́͜",
+        "É̸̛͈̰̹̘̟̳̲͖̣͉̐͛͂̃̍̓͘L̸̜̺͖̼̮̙̈́̌́̏̈́͑̋̽̔̇̅̀̀͘̕͝͝͠G̷͎̜̖͆͠O̷̡̡͔͚͖͚̪̗͓̮̐̓̌́̒̆̐͛͒̔͐̂͝V̴͓͚̳̇̀̎̋̋̃͒Ę̶̢̢̨͍͚̙̥̭̩̹̦̄̓͋̔̈́̄̋̉̉̾̍͆́̄͘R̶̡͓̮͔̓̉̍̂̈́̀́̂̆̽̾̔̕͠͝Ń̴̜̰̭͖̫̺̰͈̬̬͖͉̫̃̍̓́͋̒̌̒͋͐̂̑̕S̴̟̘͓͎͎̏̈̕Ơ̶̧̨͔͎͇͎̝̞̗̘̯̱̦̫ͅŇ̵̢̛̦̳̗̞̠̞̰̻̮̪̣̲͎̊̊͋̓̀̐͋̈́͗̈́͌̑̕̚͠T̶̨̪͙͇͉̩̮̼̗͇̣̳̬̟̘͙̙͆̾͒̎̍̿͘͝I̸͇̥̟͔̗͚̓̋͊̽̊̈́̆͐̓̓͘̚͝͝ͅṬ̶́͛ͅĘ̶̨̢̗̭̩̼̘͎͓̱͚̯̪̯̦̼̄̇̔̓̍̑͊̅̒̓́̊͘͝͠͝L̵͚̜̜̺͍͍̫̰̻̃͐͌̓̐͂̀̈͗̄͌̃͝L̵̬̳̍̋̃̒̓̋͌̈͊̉̏̓͠͝Ḛ̴̍͐̇͐͆S̴̡̳͈̘͕͍͎̟̖͎̙͗́̈́́̒͜Ǎ̵̢̢̧̻̫̘̣̘̺͕̀̎L̶͈̫̮͖̰̞̗̘͚̯̘̗͍̟̓M̸̨̨̛̖̣͍̲͉̞͇̲̟͇̲̻͓̮͊͑̀́̆̿̐͜E̶̛̮͎͕̹̖̾͒̑̋͝U̵̢͔̼̰̱̔͗̈͒̆̀̀̽̈́̒̄͠͝A̷͉̤̘̮̪̱̠̟̓ͅB̷̢̧̢̢̛̝̺̮̩͎͍̠̯̜̝͈̭͝A̸̡̨̨̪̗̻͈͙͗̀̊̈́͋̄̊͊̑̈́̾̈̀͒͘̕̕S̴̱̙̖͊͊̔̔̇̎̋̎̌̂͌̓͘T̴̢̧̩͉̩̺̻̀ͅ",
+        "Ç̶̡̡̧̜͖̳̞͓̫̯̺͔̳͔͎͖͚͂̀͂̂̇͠O̴̡̝̥̼͈̼̜̬̠͙͎̗̲̻͇͐̅͋̀̍̾̓̓̚̕͝Ṉ̴̪̳̖̤̯̱̣̺͎̫͔̬̅́͒̐͗̇͘͜͜T̷̡̖̫̰̥̩̘̻̲̻͓͕̗͒̐̏̄͋̃̔͘̕ͅͅR̶̨̢̧̢̨̛̯̱̬̳̙̀́͊͗͊̽̽́̌͜Ȏ̵̼̹̭̜͍̲͙̥̰̜̪͈̦͝ͅL̷̰̣͎̬̭̣̭̣̟͈͚͉͉̟̯̦͈̑͂̍͠Ê̸̝̝̝̗͍̦̩̮̲̰̘̞͔͆̈́̀̾͛̎̈́̚̚̚̕͝͝͝ͅM̷̧̰̮͎̪͈͍͙͚̀̇̆́̀̀̉̑̃̓-̶̧̢̢̡̞̱̘͖͔͍͙͔̫̖͖̳̬̀̂̓̎͂̾̈́̓̒̔͛̓̈́ͅḨ̷̎̔Ŏ̶̟̱̪̘͖̮̠̮̙͖̀͆͐́̿̽̾́̍̀͋̒͘͘͜͜͜ ̶̡͖̹͇̿̈́̈̊̎̀̕Ţ̸̢̟̪̹̺̜̖̲̠̮͖͚̰͕̜͕̌Ǫ̵̡̢̨̰̺̠̩͉̥̲͎͚̘̗͒̍̋͊͒̂̀̒̚͜͜͝T̶̡̢̫̫̣̺̭̠̝͎̱̝͖͇͓̫͕̾́̓̇̅̋̏̚͠͝!̷̨̝̫͖̪̳̪̮͂̎̇͒͊͒̑̚͠͝͝ ̸̨̡̢̡̢̧̫̣̰̭̻̗̩̲̰͙̉͋̈̉̈́͗̓T̶̫̪̭̘̞͇̿̿͑͋̽͑̉͌͌̈́̓̾̂͠͝Ö̶̢͓̭̣̺̯͍͇̻̰͔̜͎̬̤̥̬́̀͌̓͂̍̇̉̅͌̃̽̀̿̅͘̕Ţ̵̪̗̳͔͓̮̱̙͈̰͖̯͖͆̚͜ͅͅ!̶̛̰̦̱̩̮̰̜̜͉̊̄͌̍̆̑̊͌͗̚̕̚̕ ̴̡͕̘̭̱̻̤͓͚̤̜̖̭̰̰̯̇̈́̍̾̏͑̈́̓͛̏̎͋̄̚̚͠Ţ̴̧̥̜̗̞̱͓̫͊̔̽̌̂͌̄̽͋Ō̷̢̡̙̤̻̠͈̝͍̈͋̀͋̍̒̏̉͒͠͠T̶̨̛̘̳̖̪͎̭̀͐̐͛̌̔̊̐͊́̋̂̽̓͘̚͝!̷͔̾͆́̐̀̌͂̀̐̓̀̂̊̕͠͝͝ ̸̥̙̙͕͕̄̽͆́̌T̵̢͕̯̩̥̱̅̀͊͐̔͆̒͗̅̈̋̾̈͐̄̕̕͘ͅƠ̴̢̘̣̼͕͎̟͖̽̐͒̑̀͋̓̓̽̒̑́͗̂͂̚Ţ̴̨̢̗̺̙̥̩̬̳̥̪̠̦͆̐͌͂͗͛̌̿͗̃͌̓̚̚̕͘̕͝!̷̧̞̥̜̺̗̼̠̼̰̟̫̠̪͇̻̇̒̊̀̇̑̿̽̽͆̅͘͜",
+        "F̵̡̨̢̥͇̪̠͉͎͎̣̞͖̻̥̱͋͑̅̃̀͋̍̈̑̅͐͗̐̀͆̏͝͝ͅͅȨ̸̡̪̪̞̱̪̖̳̻̹͖͑̆̋̀́͌̾̔̔̍͋̓̀͒̊̋̓́̕̚͜͜͠S̸̨̧̤̟̺̯̬͓̝̟̣̜̘̲̥͔̭͙̘̗̜̝͆́̐͛͛̈́̀̂̉̋͂͂̅͝Q̶̜̝̠̊͝Ụ̷̢̢̗͉͇̺͈͎̫̱͈̭͓̪̣̖̮̻̝͙̮̋͛́͊̐͂̀̈́́͒̊̚͜͝E̶̢̬͇̬͎̣̹̱̝̪̗̤͓͖̱̺̽̋̋͑̋̓̉P̷̡̛̙͎͑̐͋̽̉̀͂̇͛̀̇̉̌̑͜͝͝͠A̴͎̘͉̔͑̒̑̏̈́͑͠Ŕ̶̨̨̤͈͉̣̦͈̗̈͛͐̿̅̊̈̂̆͐̚̕͜ͅI̵͔̹̭̩͕̓̀͘F̴̠̦͕̦̼͈̀Ę̷̨̡̨̡̡̯̝͚͈͖͕͈̖̘̙̬̻̜͓̜̰̀̀͑̅͝ͅS̵̡̨̨͚̜̝͍̤̻͎͙̩̼̺̺͚͗̐̅̈̊̇̌͒̋̑̏͒̆̎̔͗̑̓̀͛̿͘Q̸̛̭̞̓̅͋͗̈́̾̽̈̄̉͛̃̓̍̿̓̆̈́͂̕͘Ű̸̧̨̡̢̧̢̱̪̘͉̞̲̞̜͖͎̭̰̹̖̦͔ͅË̸̡̨̧̢̞͓̟̹̩͓͓͓͓̤͇́̾̂̊̅̊̈́̒͛͒̅͝P̸̨̢̧̫͙͈͓͈̹̭̼̯̜͙̗̮̋̂̓̊͒̈́̃̅́̓͗͌̿͠Ǎ̵̛͈̖̤̰͓͕̩̱͛͜ͅŔ̴̜̮̰̮͖̦̬͚͕̮͔̝̫͇̙̈̀̽̆̋̒̈́̚ͅÌ̷̡̨̛͎̦̰̰͈̩͖̖̜̜̜̘͓̝̮̊̎͆̋̋̽͜F̴̡̢̛̙͎̫͖͖͈͈͈̑͊̂̀͂͌͂̇́͑̎̇̕̚͝͝E̸̡̡̝̦͍̲̥̤͚͎̫͕̲͍̮̱͑̊͌͋́̅̉̿̇̇̀̔̓̆̾́̇̿̾͠͝ͅS̴̢͓̣̺̣͈̫̲̜̞̰̱̓̽̅͗͐̀̕͜͠Q̴̢̡̤̫̝̠̝̠͍͚͍͖͓̲͕̥̩͚͛̾̅̈͂ͅŲ̵͉̙̆̐̓̀̑̒̑͂̿͂̓̄̈̄͝͠ͅȨ̴̛̛̦̖̹̻̳̦̻͔͉̗̤̳̩͔̖̦̩͕̘̝̭͈́̅͒̍̍̉͗̔̑̈́̒̊̾̑̋̉̃͌͌́̕̚ͅP̵̡̞̊͊́̾͘ͅA̴̡̢̟̤̥̣̬̟̗͙̲̫̤͎̘̯͚͔̫̤̤̮͒̈́̎̈́͐͌͗͑͆̂̀͜R̷̨̡̢̠͈̭̹̝̮̯͚̗̺̯͉̪̒̈́͒̀͗̓̈́̉̑̕͘Ǐ̷̡̢͎̥̺̼̹̼̗͈̖͖̩͊̈́̏̇̇̃̌͊̍̃̂̍̕͝͠͠",
+        "Ṽ̶͖͚͚͙̲̟͈͖̳̦͍̼̓͗̀̀͂̃͌́͘͝A̴̡̧̡̛̤̳̣̱̲̮͗͆̌̓̐̅̈́̄͑̑̀͂̿̍̽̏̊̉̐̋̕͝M̴̡̛̬̤̞͙̥̭͖̘̈́̒̽͐̐͗͊̃́̓̈́̐̈͆̓̍͂̚͘À̴̧͈̻̩͇͍̯͇͖͙͖̮̗̤̙̤̱̳̻̃̈́͊͘͜͜S̶̨̨̝̞͓͍̹̠͉̜̈́̇̀͑̂̈͗̓͛͛̉̉Ş̷̨̣̱͔̠̜̠͎̲̹͕̩̤͉͉̗̰̮̳̃̒̏̀̒̒̃̋̂́̔͝ͅA̵̢̼̤̬̙̞͂̓͂͒͌̒͠ͅR̷̨̨̨̥̭̼̞͎̫̼͉̬̯̯̦͓̟͔̼̖̥͉̺͓̬̲̯̩̱̔͜ͅA̷̛͈̫̘͔̻̬̹̠̓͑̈́̉̓̈́͊͑͛̃͒̓͆̒̃̆̈̓́͛̕̕̚͘͠͠P̶̨̧̯͍͉̫̫̬̜̯̯̈́̈̓̂̆̈̓͗̉̃̾̇͂̓̋̉́͋̔̒̌̉̓̃̐̒͝I̶̢̯̺͕̥͖̖͇͍̻͔͔̤͈͈̯̲͇̜̳̝̜̺̭̙̟͗̇̃̋̔̐́̾̄͗́͊̑̓̾͒̚͝D̸̡̛͖̤̪̪̫̻̦͇̿̑̄̏̽͌̆͌̿̊́̓̎̽͌̌̌͛̈́̓̑̊̃͘͝͝͝S̷̘͔͙̥̤͖͕̘̟̈́͌̾͌͋͒̽̇̆̍̚̕ͅI̶̥̭̹̜͖͋́̑̑̑̌̔̍̕͝Ų̴̛͓͈̜̍̏́̈́̒̊̀̅͊̋̆̿̓̄̿̕̚͝͝Š̷͓͈͈͉̺̦͔̬̩͙̲̞͚̝͍̫̦͇̒͆͌P̶̧̢̢̹̲̘̘̫̠̫̲̫͚̙̝̲̹͋̒̾́̊͗̀͐̈́̓̅̂̂͊͋̈́̈́̋̎͆̾̍̉́̇͠͠͠ͅL̸̢̢̰̮͎̘̮͚̣͒̈́̊͌̈͗̿̀͑̔̔͊͆͛͘͘̚ͅA̶̡̧̧͖͈̘̩̘̜̣̫̳͕͖̯͍̼̭͖͚̜̳͎͔̬̟̙̓̐̋̈́͛̑̈́̍͊̑͆̃̄̿̓̕͜͝͠ͅU̸̼̯͚̰̫̮̼̫͔̫̞̪̓͌̽̈̏̐̕P̴̡̹͖͖̗̟̞͇̊͜ͅA̵͙͉̥̤̗̖̥͙̟̞͉͙̲̳͚̦̔R̶̨̨̼̰͈͙̖̬͔͚͖̺͍͇̝̼̻̠̝̗͈͐̽͐̈́̓̉̈́͒̾͝ͅẢ̴̡̡̧̢̛͚̫͇͕̰̯͈͍̘͍̹̘̙̻͍͕̠̝̳͈̝̱͕̭̞̈́͛́̀̚",
+        "P̵̡̧̺̠̲̲͕̪̫̩̹̝̜̦̙͓̺͉̳̤͈̥͙̩͕̥̳̙̯̰̗̯̭̻̘̬̙̓ͅÈ̷̢̢̡͕̤̥͚̞̦̝̪̗̜͙̺͎̹̩̥̌̐̃̑̎̃̿̒́͘͘Ŕ̸̢̨̡̛̛̲̙͔͖̠̗͙̻̞̭̖̬͙͎͕͙̰̭͔̗̘̝̳͍̯̙͚̘̬͓̮͖͇͕͚̉̑̏́̅̈͜Q̷͙̂̒Ừ̶̡̡̛̥̟̱̖̪͎̰̺̮̟͙̟͎͉̗̬̮̬̩̬̭̝̝̼̘͌̋̋̂͌͐̆̿͋́͗̀̓͌̔͆̔̂̍̄̏͊͆̋͘͜͝͠͠͠ͅE̵̡̧̧̳̺̥̰̞̱̭̫̼͓͙̬̫̰̻͍̹̙͚̞͇͍̞͕̝̤͔̘̺̞̭̺̭͂͗̋̑̐͗̔̌͜È̴̛͔͕͍͖͈̯̖̎͑̆̔̂̌̿̆̔͑̔̐̃̆̌̾̆͊̓̋͛̈́͒̒̚̚͘͜͝͝ͅͅĚ̸̢̧̡̼̤̲̟̝̰̱͖̞͇̹͇͍̖͓̮̦̝̤̹̮̲͉̩̟͇͇͎̣͍͙͖̋͊́̿̋̈́̂̄̽́̒̽̑͐̌̍̓̀͑̈͋͋̾̌̍̔̎̀͘͜͜͠͝͝ͅͅE̷̤̪͉͙̦̬̙̱͖̦̤̘̰͚͈̝̘̤̹̮̖̩̠͙̣̰̠͖̬̳̫̗̾̇͑͒͒̎̅̇̓̑͊̍͒̉̏̂̎̕͘͠ͅÈ̷̢̡̗̘͓͈͕̙͍͙̭̟̜̮M̵̢̧̛̫̜̯̬͍̗̹̠̣̬̝̱͇͍͙̞̫̜̩̺̬̬͇̱̼̱͔̓̍̈͛̌͆͆̀͆̀͒͗̉̏̀͒͊̈́̂͒̒̂́͑͛̍̚V̸͈̩̝̩̺̞̰̩̦̈́̾́͆͐̓͜O̶̡̗̪̥̪̗̥͎͕̣̭̼̞̹̯͓̭̝̱̊͊̑́̐̈́͑̉̾̕Ḻ̷̢̣̲̰̖͈̝̮̖͉̻̙͓̭͚̺̜̻̂̐̾͝Ś̵̱͖̪̠̼̘̙̝̭̪͙̲͙͖̦̫̮̠̗̗̟̂͋̀̀̒̈̎͑́͘͘͘̚͜͠F̶̧̢̙̳̱͇͚̺̙̖̗͍̭̦̖̳̰̻̫̝̫̯̯̬̱̙͚͎̤̽͛̀͒̍̿̋̄̽͠ͅȨ̷̢̠͙̣̺̘̹̬͙͍̙͓̦̻̭͓̟̠͇͖̜̖̦̳͕̹̝̜̳̘̦̐̓R̵̛̟͈͉͈̞͖̙̂͛͒͐͛̅̈́͋̄́̊̅̏̈́̓̀̆̓̾͊̎͝͠͝͝P̴̢̡̨̢̛͚̝̱͔̠̺̬̜̰̩̤̹̮̼̓͑̍̉̾̋̿̍̐́̑̆̋̂̓̆̎̐͆̾͗̅̋́̆̓͆̅̃̇͊̂̚͠ͅͅĄ̷̣̝͕͎̫̜̳͍̯̤̻̩̬̘̲̬͚̭͍͔͙̹͙̯͚̩͙̳̥͐̊͒̌͗̍̚͜͝͠͝ͅT̶̢̛͉̩͕̖͉̲͙̮̲̄͒̈́͊̔̽͝Į̸̨̛̜̝̣͕̣͍̭̫̪͇̮͕̦̳̩͇̌̓͒̄̆͑̉̈́͌̆͂͗͆̓͑̃̊̅̈́̑͋̒̃͆͊̍͝͠͝ͅͅI̸͓̻͐͐̔̽͑̉͆̔̒̄̓͛̇̍̏̀̊͐̀̉̐̆̐̽̈͌̀̄͘͝͝͝I̷̢̧̧̱͚̼͍̫͉̜̹̹͕̱̮͕̻̬̩̘̳̺͇̥͓͇̝͔̮̞̖͓̤̳͉̤͑͗̉̀̑̾͑́͋̕͜͜͝͠ͅḮ̸̡̡̢͔͙͈̞͔͉̭̝̦̳̜͉̫̩̹̘̤̩̥̹̖̼̤̠̖͙̟̑̇̎͜͜Į̸͉͙̫̘͈̜̮̞̲̠̿̅̉̄̄̓̍̀̏͆̌̆͋͆̀̂͐͐̈̑́̅̇͛̚͘͘͜͝͝ͅĮ̴̧͍͍̫̱̲̟̰̹̜̪̺̹̣͈͎̪̖̠̠̫̙̩͎͙̹̗͔́̿̓̅͋͐͆͊̎̃̓́̄̄̆̾̈́̒̀̆̾͘͜͜͠ͅÎ̶̧̡̡̧̨̼̩͎̖̜͙̦͎̞̺̤̰̳̖̝̟̺̪̪̣̞̤̪̤̭̹͙̭̞͕̂͑̍́́̊͛̋̍̉͒͑̓̕̕̕̕ͅͅȊ̶͔̜͚̲͖̒͆͐͘I̵̢̡̧̡͍̭̻̘͍̦̟̗̲̦̩̦̿̾̈̓̔͗̇̊̌̄͂̏͊̓̈́̄͒̈̃̌̿̓̚͘̕͠Į̶̛̲̣̺͚̟͍͚͇̗͕̌̐͊̿̀͐̃̑̿̽̂͌̽͆̍̃͗͂̿̽̅̀̈́́̓͘͠ͅŖ̵̧̧̨̛̩͓̭̘̫̪͖̜̞̻̟̼͉͈̙͕̞̳͕̺̰̳̪̭͕͚̥͖͉̠͕̞̟̹̉̑̓̓͂̂́͋̄̓͛̀̉̐̎̌̃͂̃̎̂̀͆͒̒̾͘͘̚͠",
+        "D̷̨̢̧̻̯͍̯̞̹̥̦̻͈̖͉̜̠̯̣̼̲͎̰̲̗͇̰͚̪̟̩͇̖̬̟̝͔̱̯͖̞̈́̃́̋͗̓̇̋͋̓̌̌̇̒͊̔̏̂̀̄̾̀̓̌̄̐̽̾̀͊̾̈͐̅́̅̑̀͊̇̽̂̊̔̎͗̾͘͘͜͜͜͝ͅͅE̶̡̧̧̛̱̲̫̲͈͕̻̮̭̗̪͔͚̺͖̬̪̮͔͍͓̹̟̯̯̮̤̟͉̹͍͈̖̫̟̠̭͙̭̻͂̌̀͛̿̓̉́͌̌̅̈́̒͘͘͠͠͠S̶̢̨̧̨̛̲̦̣̮̼̣̹͖̜͎̬̠̺̰̙̫̹̭̞̣̥̫͈͎̱̘̱͎̆̈̈́̆̕̕̚T̵̛̤̥̀̀͆̀̋̾̏͂̈̍̅͌̎̑̾̈́̽̾̓̌̔̉̀͗͐͑̓̊́͐̐͗̚̚̕͘̚͘͝R̸̨̡̢̡̡̛̪̝͍̞̘͖̪̻͎̹̞̦̯̞̪̖͚̳̜̺̫͚̙͕͛̀̈̀̓̚͜͜Ơ̷̧̥͔̝̲̺̤̩͓̜̙̥͚̦̣̱͕̙̦̺̗͔͍͓̳̦̜̙̟̻̩̝̝͇̽̓̾̄́͑̑̑̈́͊̈́̅̂͊͊̒̅̇͑̊͗̏̀̂͂͛͌͆͐̀͑́̉͋̑̏͗̒̇̚̚̕̚̕͜͝ͅY̶̛͕̬̲͚̲̱̹͖̋̽͐͆͂̆͋͒͛́̒̄̿͒̐̅̈́̓̉͑͑̍͌͆̓̌̍̇̑͛̈́̕͘̕͝ ̵̧̱̘͇̜͖̻͍̰͎̣̲͊̔̿͊ͅT̵̢̢̢̢̛̠͈͈̪̻̹̘͎̣̰̥̭̼͚͓̜͎̙̼͓̙͓̫͚̘̹̖̣̫̍́̀̅͛̒̎̌̒͜ͅH̴̡̨̪͉̟̬̻̱̙͎͍̹̰̠͉̤̜̩̹̼̰̺̗̱̼̲̣͖͓͔̗̤͇͖̗̮͙̜̳̰̹̼͈͊͊̇͋̅̈́̏̂̂͑̈́̾͆͋̽̉͐͋͘͘͜͜ͅË̴̗̠̪̫͇͕͆͛̍̊̾͋͗͛̑̀̑̃̑͛̈̓̊͒͝ ̵̧̧̗͉̬̣͉̦̫̩͕̺̼̪̬̖͚͈̮̣̮͙͇̖̱̩̤͕͍̟̔̌̎̈́͆̅̅̆̑̓͊̈͒̉̈́̔̀̏̀̎̉̌̌͑̀͒̄̆̐̋̃̐̊͛̋͑̔̔͂̕̚̕̚̕̕C̴̢̢̛̤̬̹̠̥̰͈͎͙͎͎̪̪̬̹̺͍̫̻̥̮̗̭̰̺̣̞͍̯̼̱̻̳̳̰͙͎̬̝̭͖̘͖̝̖̭̋́̋̐̀͂̍̈́̀̀͌͒̀͒̑̊͌̉̎́̄̈̋̉̿͐͒͊̾̌̍̓̓̾͊̐̅͂͋͂̉̑̅̆͠͠ͅH̸̨̢̧̢̢̡̧̨̛̛̭͈̩͙̖̯͙͚̪̱̪̝͔̻̜̹̰̖̬̦̪͉̠͍̰͖̘̣̩̺̤̰̰̬̦͎̺̫͎͎͒̀̐̾́̄̉̔̇̀̀͐̿͒̔͂̉̆̅͂́͑̄̈́̍͆̍̎̀̈́̽̚̚͘͜ͅI̵̧̡̢̢̡̨̢̛̙̞̭̗̯̺̜̹͙̩̟̯̤̤̙͍̤̩̟̰̠̜̗̮̳͍̻̩͙̓̏́̿͜͝ͅḺ̷̡̛̛̱̰̠̟̱͙͔͚̠̦͔̼͒̏̈̃̋̅͋̍͋̽̍̔̔̓̈͐̇͒̏̍͐͐͌͆͑͊̚̚̕D̷̡̧̨̢̡̨̢̖̝͍̪̹͇͎̝͎̬͉͖̠̳̭̞̗̻̦̩̞̪̝̥̝͓̺͖̤͍̩͉͉̫̠̠̫̻̲͇͂̊͌̓̍̓̓͌̌̎̅̂̄̇͒̃̈́̔̾̂̅̈́̿̓͌̋̍̾̆͛̈̏͆̓̕̕̚͘͜͠͝͝͝͝,̵̧̘̮̳̜̬̲͈̱̻̺͈̠̭͎̲̟̦̥̪̦̮͎̗̟̣͕̺̝̯̮̮̓̎̐͜͜ͅ ̸̨̢̨̬̭̝̳͖̤̬̟͚͇̬̺̞̭͎̺̫̥͓̫̬̜̮̰͈̜͓̼̙͔̪̜̻̠̥̖̫̙̯̩̝̹͙̽̈͗́͗̑̅̌́́̐͂͋͊̿̅̓̂͘͘͝ͅC̵̢̢̨̢̧̧̧̡̛̫͎͓͕̫̣͕̣̮̱̳̤̖̩͚̺̯͕̙̩͚͚͍̮͚̖̦͆͆̅̃̓͋̈́͌͂̓̽̈́͂͊̃̾́̄̈́͘̕͜͜͠Ơ̶̗̘̹͚͕̮̫͉͗̅́́͑́̋͛̎̈̄̈́̆͌͋́̈͌̇̏͘͝͝R̶̼̺͆̒̄̀̆̽̀̈̓́̓̽̀̉͌̅̈͒͗̋͆̿͂͛͑́́́̓̂̅̅̾̋͘̕͝͝͝͝͝͠͝͝ͅŖ̷̡̧̡̢͈͍̹̦̩̟̮̙̘̩̤̣͍̗͖̞̗͖͙̦̪͚̖͈͖̗͔̼̗̫̦͉̻͈͖̪̮̯̹͈̭͓͇̒͆̓̑̀̄̅̔͂̐̉̎̎̑̀̀̐̀̆͛̎̉̈̌̈́͊͌̏͌̕͝ͅͅỮ̶̢̨̧̛̦͔̫͖̥̮͙̻̙̹̳̭̺͎̬̯̟̙̣͕̮̭͈̜͈̣̒̂͆̂̃̐͛̏͆͂͆͋̽͛͛͂͑͂̍̿̆̒͂͒͗̀̅̿̂̈͂̃̑͘̚̕͝͠͠P̵̡̡̡̧̛̩̞̥̦̠̬͇̤̟̬̤̭̤͍̞̪̬̺̻̗̣̥̘̳̳̹̰͈̂͛̂̀̌͐̈́̏̃̄̑̒͆̆̓̑̃̂̉̆̃̕͜͠T̵̡̧͍̪̳̫̰̞̻͍̝͓͚͉̻̗͕̪̹̟͓̘̙͂̄͛́͜͠ͅ ̷̨̡͙͕͉̩̜͇͇̺̟̙̗̺͍̗̳̼͕̯͂̎͋̅̈͐̓̊͘͜ͅṬ̸̢̛̟̠͕̼̤̮̞͙͇̬͚̠̣͎̀͌͌̔́͊͂̀̉͋̽̄̓̂̃͐̀͂͑̾̐́̔̃͘͝͠͝͠H̸̨̨̧̛̛͍̬͖̼̩̺͙̹̞͇̆͐͒̈́̉̽̄̐̿̀̎̓̍͗̋͊͛̈́͛͊͋̐̈͆͘Ē̷̢̠̹͚̟̐̅̋̎͛͆͠͝M̸̨̼̲͈̜̯̰̯̠̗̳̫̪̺̪̣̯͐̆̋̎͐̇̔̐͗̽̊̆̉̔͒́͛̑̓̐̒̚ ̵̡̡̧̛͍̟̥̙͖̪͓̖̞̩̩͍̮̩̻̼̭̻̦͎͇̜̟̥͚̹̼͓̤͔͓̞̙͔̹͉̙̝̳̞̹̈́̎̓͆̂̊̆̈́̄͌͛́͛͋͐̂͑̽͐̓͌̊̑̈̉̓͘̚͘͜͜͝͝͝͝͠͠ͅA̶̢̧̛̱̫̭̯̤̺̜̲̣͓̗̺̦͚̪̻̙̜̙̜̦͙͓͉͎͓̪̤̪̞̳͓̻̘̞̞̭̿̒̌̍͊̒̈́̓̿̓̅̈́̏̇͒̈̅̑͗͋̄͐͛̊͌̈́̂͠ͅͅḺ̵̛͖̝̠͖̣̯̙̝̬̬͇̮̺̩̰̝̳̥̖̯͖̤͔̜̓̓̒̿̐̋̈́͐͆̋́̏̅͋̿̾͑͝͝L̶̢̢̨̡̧͙̱̤̻̱̤͎̺̼̞͖̹̙̮̥̤̹̝̘̫̙̗̪͚̟̝̜̘͙̯̗̘͙̦̳̲̊̅̈́̈́̆͆͆̓̒͝ͅ",
+        "R̵̡̛̛̛̳̺̟̮̣̤̜̳͔͙͇̤͛̊̒̊̏̈́̓̓̉̂͆̏̍̀́̿͑̔̀̇̎̂̎͋͛́͆̔̀͂͋̎̑̍͐̃͘͘̚̕͜͜ͅI̸̡̛̻͉̪͚̱͉̲̭̥̣̽̄͐͐̂̀̓̂̈̅̐͑̄̔͆̐̓͗̑̃̓̈̿̈́̉̔̾̀̋̐̄̀̀̔͆̕̕̕̕͜͝ͅP̷̨̨̢̡͈͔͓͍̹̠͇̤̥̪̜̟̺̲̙̝̟̼͖͉͕̼̏̊̇̿̓̈́̚ͅͅA̷̛̛̯̿́̍́̇̓̈́̊̒̓̆͗́̇̍̃̋́͒̐͗̾̍̒̃̿́̅͂̎̐̅̉̕̚͝͝͠͠͠͝N̷̡̨̡̜̝͙̳͇̹̩̹͕͚̜̱̯̱̼̣̼̤̰̫̜̪̾̅̀̍̉̐̄̑̋̊̄̀́̈́̕͝͠͠͠D̷̢̡͈̻̻͉̰̬͔̙̘̟͓̪͓̰̮̳̲̱̖̙̻͕͖̲͓̱͚͈̘̜̹̭̪̭̖̪̗̩̗̲͛̆͋͗̑̈́̂͂̑́̅́́͋̈́̀̾̐͊͜͜͝͝ͅT̴̢̧̛̮̲̱̜̜̼̣̫̙̞͈̈́͒̈́̈́̍̎̎͌͊̓̐͊̑̐̈́͌͑̒̄́̀́̀̽̔͋͐͊̔̃̀̏͑̉̕͘̚͠ͅĘ̸̨̡̢̠̭͍̳̠̳̩̙͙̝̱̭̰͖̯̦͎̥̯̳̖̼̻̦̯̟̟̝̫͕͈̤̔̅͆́̃̃͆̏̄̔̈́̑͗̇̓̄͠͝͝͠͝A̷̡̨̡̧̹̪̝̳̯̘̝̗̤̲̩̠̺͕̠̰͕̲͖̙͖̮̤͈̗͔̩̺̳͕̪͇̪͖̼̪̔̅̈́̿͊̄̏̒͂̆͆̐́́̌͘̕̚͠ͅȀ̸̡̨̢̢̛̝͙͎̙͎̰̫͈̰̙̰͍̣̘̥͕̪̫̥͓̰͓̪̺͚̺̥̤̯̰̩̟͖̰̻̘͍͖̲̰̠̼̾̂̓̊̾̀͆̅͒̄̏͛͆͋͋̏̍̋͛̈́̃̌͑͑̈̆̍̓̋̔̃͆͑̒̅̂̍͂̇̀̓͗̒͘͜͠͝͝ͅͅͅĂ̶̢̧̼̱͎̺̜̟̙̏͊̌̈́̿͗̎͐͋̓͐̆̈̆̾̐͌͊̋̾̅͐͊̈́̂̇͌̇͂̔̅̒̑̑̚̕̚͜͝͝͠͝͝A̶̧̨̨̧̧̧̨̫̖̻̦͚̹̺͎̼̭̫͍͇͈̺͚͖̪͉̻͙͚̤͔͓̬̮̭͍̹̼̟͔̯̱̲̙̹͉͇̺̭͑̓̒̐́̌̆́̄̀̓̑̽̅́̄̀͐̇͐̓̂͐͌͘̕͝͠Ą̴̛͕̳͔̥͕̟͖̦̹̺̠̼̙̮͍̯̭̲̝͔̝̹̘͇̹̗̯̼͑͗͐̆̇͛̈́͗̉̌̓̅̃͆͆̎̆̈́̇̓̂̋̈́̌̾̔͌͘̚͜͝͝͝ͅA̴̧̢̡̢̢̡͈̤̬̯̰͕̗̬͎̼̩̫̫̝͕̠̰̪̥͖̠̟͚̺̜̜͎̤̤̓͂̔͆̃̆̈́͊̏͛̊̐̽̒͑͊̄͆̂̓͗͝͝ͅA̷̛̘̻͌̑̏̇̊̀͒̈́̅̒̔̓̏̀̆͋͘̕̕͝͝Ä̴̡̛͎͈̬̞̫͚͕͍̫͎̳͙̠͇̹̰̗́̃͌͑̄̈̇͐͒̈́̎̑̄́͛̈́̃̉͐̈͌͑͌̚͘͠͝͠͝Ą̵̢̧̛̛̮͈̰͙̗̘͍̮͎̙̪̤̫̘̼̞̟͙̬̳̭͈̜̙̯̠̦͖̫̙̰̣̖̺̝̲̙̯̀̽̅̇͋̈̅̒̆̔̾͋́́̿́̓̀͗̏̄̑̈́͂̑̍̓̌̿̆̕ͅͅA̶̹͕̪̾͊̂̽̽̔̔̃̐̃̍̍̈̾̏̕͝͝Ą̴̨̛̱͉͉͖̲͈̯̗͎͖̳̮̟̱̙̙̘̭̯̤̦̗͕̞͉̼̐̊̾̅̐̈̔̎̂̑̿̑̒͆͛̉̒͒̿̕͘̕͠͝͝ͅͅÀ̴̡̡̨̢̼̩̰̳̳̟̤̦͕̳͇̠͍̭̝̲̠̩͙̼̪͕͓̺̇̎̆́̈́͌̀̔A̸̧̗̮̝͎̲̲̭̻͇̜̭̙͎̼̯̬̩̖͎͖̗͍̯̖̲̯̪͓̘̥̣͔̺͎͋̋̀̓̌̐̃̿͌͑̉͂̈̓̂̊̎͒̂̊̓͌͊̚̚͜͜͠͝͝͝͝ͅA̶͇͉̟̻̪̤̎͆̆̔̀̊͂̿͆͛͊̅̌͂̌̑̈̅͑̔̈́̀̒̌͑̈̏̍̈́̀̌̈́͊͊̃͘͝͠͝A̵̢̧̛͉͓̤̱̞͙̻̥̘̘͍̪̹̳̰̗̟͙̳̩͎͕̰̤͗̀̉̍̇̿̊̾̊̌̒͊̅́͌͂̇̅̑̔͐̒͗̇̌̾͐̿̀̑̿̋͂̊́͐̉̃͑̽̈́̌̿̀̄̈́̀̚͜͝ͅA̴̧̛̮͎̺̮͖̰̱̮̖̣̦̝̩̬̮̣̬̜͂̿̎͑́̇́̓̈́͌͋͋͊͐̍̀̎͗̐̑́͛̏͂̐̔͐̓̈̔̌̚̕͘̚͝͠͝͝͝͝ͅẢ̷̢̨̡̛̝̥̞̳̯̣̗̙̰̯̦̞͈̭̝͙̺̱̦͍̱̭̩͉̩̰̙̫̜̮͔̳͙͉̼̘̳̩̪̦̣͇̣͓̮͜ͅR̴̢̧̢̡̧͍̗̹͎͓̺̩̦̣̭̗̟̦̦͉̘̠̫̘̬͈̯̭̬̦̞̳̫̽́̅͆̽͜"
+	    ];
+	    
+      
+      document.getElementById("missatges").innerText = this.messages[this.index];
+      document.getElementById("missatges").style.color = "darkred";
+      document.getElementById("missatges").style.fontFamily = "Optima, sans-serif";
+    }
+  /**
+   * Actualitza la direcció de la serp a partir de l'event (tecla dreta, esquerra, amunt, avall)
+   * @param {event} e - l'event de la tecla premuda
+   */
+  input(e) {
+	  let dirtemp;
+      if (e.keyCode == "38") {
+        dirtemp = [0, -1];
+      // up arrow
+      } else if (e.keyCode == "40") {
+        dirtemp = [0, 1];
+      // down arrow
+      } else if (e.keyCode == "37") {
+        dirtemp = [-1, 0];
+      // left arrow
+      } else if (e.keyCode == "39") {
+        dirtemp = [1, 0];
+      // right arrow
+      }
 
-	/**
-	 * Neteja el canvas (pinta'l de blanc)
-	 */
-	clear() { 
-		this.ctx.beginPath();
-		this.ctx.fillStyle = 'grey';
-		this.ctx.fillRect(0, 0, this.width, this.height);
-		this.ctx.stroke();
-
-	}
-
-	/**
-	 * Dibuixa la serp al canvas
-	 */
-	drawSnake() {
-		for (let i=0; i<this.pos.length; i++){
-			this.drawSquare(this.pos[i][0],this.pos[i][1],'black');
-		}
-	}
-
-	/**
-	 * Dibuixa la poma al canvas
-	 */
-	drawFood() {
-	}
-
-	/**
-	 * La serp xoca amb la posició donada?
-	 * @param {number} x -  posició x a comprovar
-	 * @param {number} y -  posició y a comprovar
-	 * @return {boolean} - xoca o no
-	 */
-	collides(x,y) {
-	}
-
-	/**
-	 * Afegeix un menjar a una posició aleatòria, la posició no ha de ser cap de les de la serp
-	 */
-	addFood() {
-	}
-
-	/**
-	 * Calcula una nova posició a partir de la ubicació de la serp
-	 * @return {Array} - nova posició
-	 */
-	newTile() {
-		let newpos=[];
-		for (let i = 0; i<this.pos.length; i++){
-			newpos[0] = this.pos[0][0]+this.direccio[0];
-			newpos[1] = this.pos[0][1]+this.direccio[1];
-		}
-		return newpos;
-	}
-
-	/**
-	 * Calcula el nou estat del joc, nova posició de la serp, nou menjar si n'hi ha ...
-	 * i ho dibuixa al canvas
-	 */
-	step() {
-		this.clear();
-		this.pos[0] = this.newTile();
-		this.drawSnake();
-	}
-
-	/**
-	 * Actualitza la direcció de la serp a partir de l'event (tecla dreta, esquerra, amunt, avall)
-	 * @param {event} e - l'event de la tecla premuda
-	 */
-	input(e) {
-		if (e.keyCode == '38') {
-			this.direccio = [0,-1];
-			// up arrow
-		}
-		else if (e.keyCode == '40') {
-			this.direccio = [0,1];
-			// down arrow
-		}
-		else if (e.keyCode == '37') {
-			this.direccio = [-1,0];
-		   // left arrow
-		}
-		else if (e.keyCode == '39') {
-			this.direccio = [1,0];
-		   // right arrow
-		}
-	}
+	    if (!((dirtemp[0]+this.direccio[0]==0)&&(dirtemp[1]+this.direccio[1]==0))){
+		    this.direccio = dirtemp;
+	    }
+    }
+  
 }
 
-let game = new Game(300,300,15); // Crea un nou joc
+let game = new Game(300, 300, 15); // Crea un nou joc
 document.onkeydown = game.input.bind(game); // Assigna l'event de les tecles a la funció input del nostre joc
-window.setInterval(game.step.bind(game),100); // Fes que la funció que actualitza el nostre joc s'executi cada 100ms
+window.setInterval(game.step.bind(game), 16); // Fes que la funció que actualitza el nostre joc s'executi cada 16ms
+
