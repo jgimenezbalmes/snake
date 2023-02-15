@@ -77,11 +77,12 @@ class Game {
   /**
    * Dibuixa la serp al canvas
    */
+
   drawSnake() {
-    for (let i = 0; i < this.pos.length; i++) {
-      this.drawSquare(this.pos[i][0], this.pos[i][1], "#454138");
-    }
+
+    this.pos.forEach(a => this.drawSquare(a[0], a[1], "#454138"));
   }
+  
 
   /**
    * Dibuixa la poma al canvas
@@ -97,13 +98,9 @@ class Game {
    * @return {boolean} - xoca o no
    */
   collides(x, y) {
-    let estatcol = false;
-    for (let i = 0; i < this.pos.length; i++) {
-      if (this.pos[i][0] == x && this.pos[i][1] == y) {
-        estatcol = true;
-      }
-    }
-    return estatcol;
+
+    return this.pos.some((a) => a[0] == x && a[1] == y);
+ 
   }
 
   /**
@@ -129,12 +126,12 @@ class Game {
     let newpos = [];
     newpos[0] = (this.pos[this.pos.length - 1][0] + this.direccio[0])%this.amount;
     newpos[1] = (this.pos[this.pos.length - 1][1] + this.direccio[1])%this.amount;
-	if (newpos[0]<0){
-		newpos[0] = this.amount+newpos[0];
-	}
-	if (newpos[1]<0){
-		newpos[1] = this.amount+newpos[1];
-	}
+	  if (newpos[0]<0){
+		  newpos[0] = this.amount+newpos[0];
+	  }
+	  if (newpos[1]<0){
+		  newpos[1] = this.amount+newpos[1];
+	  }
     return newpos;
   }
 
@@ -143,25 +140,27 @@ class Game {
    * i ho dibuixa al canvas
    */
   step() {
+    //Atribut temps per comptar frames. Amb aixo podem fer que cada cop que menja la serp, vagi mes rapid variant el valor
     this.temps++;
     if (this.temps==this.velocitat){
+      this.pos.push(this.newTile());
       if (this.collides(this.foodpos[0], this.foodpos[1])) {
-        this.pos.push(this.newTile());
 	      this.addFood();
 	      this.puntuacio+=50;
+        //Atribut perque els missatges es vagin repetint en bucle cada cop que es menja un food
 	      this.index = (this.index+1)%this.messages.length;
+        //Velocitat baixa cada cop que es menja food
         this.velocitat=parseInt(this.velocitat*0.9);
         if (this.velocitat<1){
           this.velocitat =1;
         }
       }
 	    else{
-		    this.pos.push(this.newTile());
 		    this.pos.shift();
 	    }
       this.clear();
-      this.drawSnake();
       this.drawFood();
+      this.drawSnake();
 		  if(this.collides(this.newTile()[0], this.newTile()[1])){
 			  this.start();	
 	    }
